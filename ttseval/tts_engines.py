@@ -34,21 +34,19 @@ class KokoroTTS(BaseTTS):
     name = "kokoro"
 
     def __init__(self):
-        from kokoro import KPipeline
-        self._pipeline = KPipeline(lang_code="a")
+        # kokoro 0.7.x API (compatible with Python 3.13)
+        from kokoro import generate
+        self._generate = generate
 
     def synthesize(self, text: str, out_path: str) -> tuple[int, float]:
-        import numpy as np
         import soundfile as sf
 
         t0 = time.perf_counter()
-        samples, sr = [], 24000
-        for _, _, audio in self._pipeline(text, voice="af_heart"):
-            samples.append(audio)
+        # generate() returns (samples, sample_rate) in 0.7.x
+        audio, sr = self._generate(text, voice="af", speed=1.0)
         elapsed = time.perf_counter() - t0
 
-        audio_np = np.concatenate(samples) if samples else np.zeros(sr)
-        sf.write(out_path, audio_np, sr)
+        sf.write(out_path, audio, sr)
         return sr, elapsed
 
 
@@ -73,13 +71,13 @@ class CoquiXTTSTTS(BaseTTS):
 
 def _probe_engines() -> dict[str, type[BaseTTS]]:
     """Return only engines whose top-level import succeeds."""
-    candidates = {
-        "pyttsx3": (Pyttsx3TTS, "pyttsx3"),
-        "kokoro":  (KokoroTTS,  "kokoro"),
-        "xtts":    (CoquiXTTSTTS, "TTS"),
-    }
+    candidates: list[tuple[str, type[BaseTTS], str]] = [
+        ("pyttsx3", Pyttsx3TTS,    "pyttsx3"),
+        ("kokoro",  KokoroTTS,     "kokoro"),
+        ("xtts",    CoquiXTTSTTS,  "TTS"),
+    ]
     available = {}
-    for key, (cls, pkg) in candidates.items():
+    for key, cls, pkg in candidates:
         try:
             __import__(pkg)
             available[key] = cls
