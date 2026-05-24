@@ -1,18 +1,15 @@
 """TTS engine wrappers. Each subclass implements synthesize() and is registered in ENGINES."""
 import time
 from abc import ABC, abstractmethod
-from pathlib import Path
 
 
 class BaseTTS(ABC):
     name: str = ""
+    available: bool = True
 
     @abstractmethod
     def synthesize(self, text: str, out_path: str) -> tuple[int, float]:
-        """Synthesize text to a WAV file at out_path.
-
-        Returns (sample_rate, elapsed_seconds).
-        """
+        """Synthesize text to a WAV at out_path. Returns (sample_rate, elapsed_seconds)."""
 
 
 class Pyttsx3TTS(BaseTTS):
@@ -29,7 +26,7 @@ class Pyttsx3TTS(BaseTTS):
         elapsed = time.perf_counter() - t0
 
         import soundfile as sf
-        data, sr = sf.read(out_path)
+        _, sr = sf.read(out_path)
         return sr, elapsed
 
 
@@ -38,15 +35,14 @@ class KokoroTTS(BaseTTS):
 
     def __init__(self):
         from kokoro import KPipeline
-        self._pipeline = KPipeline(lang_code="a")  # American English
+        self._pipeline = KPipeline(lang_code="a")
 
     def synthesize(self, text: str, out_path: str) -> tuple[int, float]:
         import numpy as np
         import soundfile as sf
 
         t0 = time.perf_counter()
-        samples = []
-        sr = 24000
+        samples, sr = [], 24000
         for _, _, audio in self._pipeline(text, voice="af_heart"):
             samples.append(audio)
         elapsed = time.perf_counter() - t0
@@ -66,20 +62,30 @@ class CoquiXTTSTTS(BaseTTS):
     def synthesize(self, text: str, out_path: str) -> tuple[int, float]:
         t0 = time.perf_counter()
         self._tts.tts_to_file(
-            text=text,
-            file_path=out_path,
-            speaker="Claribel Dervla",
-            language="en",
+            text=text, file_path=out_path,
+            speaker="Claribel Dervla", language="en",
         )
         elapsed = time.perf_counter() - t0
-
         import soundfile as sf
         _, sr = sf.read(out_path)
         return sr, elapsed
 
 
-ENGINES: dict[str, type[BaseTTS]] = {
-    "pyttsx3": Pyttsx3TTS,
-    "kokoro": KokoroTTS,
-    "xtts": CoquiXTTSTTS,
-}
+def _probe_engines() -> dict[str, type[BaseTTS]]:
+    """Return only engines whose top-level import succeeds."""
+    candidates = {
+        "pyttsx3": (Pyttsx3TTS, "pyttsx3"),
+        "kokoro":  (KokoroTTS,  "kokoro"),
+        "xtts":    (CoquiXTTSTTS, "TTS"),
+    }
+    available = {}
+    for key, (cls, pkg) in candidates.items():
+        try:
+            __import__(pkg)
+            available[key] = cls
+        except ImportError:
+            pass
+    return available
+
+
+ENGINES: dict[str, type[BaseTTS]] = _probe_engines()

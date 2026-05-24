@@ -5,8 +5,7 @@ from ttseval.pipeline import run_pipeline, DEFAULT_SENTENCES
 from ttseval.report import leaderboard_markdown, build_claude_prompt
 from ttseval.tts_engines import ENGINES
 
-# xtts requires coqui-tts which is not installed on the free CPU tier by default
-ENGINE_CHOICES = ["pyttsx3", "kokoro"]
+ENGINE_CHOICES = list(ENGINES.keys()) or ["pyttsx3"]
 WHISPER_CHOICES = ["tiny", "base", "small", "medium"]
 
 

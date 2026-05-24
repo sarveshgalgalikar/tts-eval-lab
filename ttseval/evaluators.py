@@ -2,6 +2,13 @@
 import functools
 import re
 
+_TORCH_AVAILABLE = False
+try:
+    import torch  # noqa: F401
+    _TORCH_AVAILABLE = True
+except ImportError:
+    pass
+
 
 class WhisperWER:
     def __init__(self, model_size: str = "base"):
@@ -16,6 +23,9 @@ class WhisperWER:
 
 class UTMOSScorer:
     def __init__(self):
+        if not _TORCH_AVAILABLE:
+            self._available = False
+            return
         try:
             import torch
             self._model = torch.hub.load(
@@ -31,7 +41,6 @@ class UTMOSScorer:
             return -1.0  # sentinel: MOS unavailable
         import torch
         import soundfile as sf
-
         wav, sr = sf.read(wav_path, dtype="float32")
         wav_t = torch.from_numpy(wav).unsqueeze(0)
         with torch.no_grad():
@@ -60,17 +69,13 @@ def _word_error_rate(ref: str, hyp: str) -> float:
     hyp_words = hyp.split()
     if not ref_words:
         return 0.0
-
-    # Dynamic programming edit distance
     d = [[0] * (len(hyp_words) + 1) for _ in range(len(ref_words) + 1)]
     for i in range(len(ref_words) + 1):
         d[i][0] = i
     for j in range(len(hyp_words) + 1):
         d[0][j] = j
-
     for i in range(1, len(ref_words) + 1):
         for j in range(1, len(hyp_words) + 1):
             cost = 0 if ref_words[i - 1] == hyp_words[j - 1] else 1
             d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost)
-
     return d[len(ref_words)][len(hyp_words)] / len(ref_words)
