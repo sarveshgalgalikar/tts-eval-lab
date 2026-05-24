@@ -67,7 +67,8 @@ with gr.Blocks(title="TTS Eval Lab", theme=gr.themes.Soft()) as demo:
             run_btn = gr.Button("▶ Run Benchmark", variant="primary")
 
         with gr.Column(scale=2):
-            leaderboard_out = gr.Markdown(label="Leaderboard")
+            gr.Markdown("### Leaderboard")
+            leaderboard_out = gr.Markdown()
             claude_prompt_out = gr.Textbox(
                 lines=18,
                 label="Paste into claude.ai for qualitative analysis",

@@ -1,5 +1,6 @@
-gradio==4.44.0
+gradio>=5.0.0
 soundfile
 numpy
 pyttsx3>=2.90
 faster-whisper
+pyaudioop
