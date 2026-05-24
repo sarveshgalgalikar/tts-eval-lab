@@ -1,14 +1,16 @@
 """TTS engine wrappers. Each subclass implements synthesize() and is registered in ENGINES."""
+from __future__ import annotations
+
 import time
 from abc import ABC, abstractmethod
+from typing import Dict, List, Tuple, Type
 
 
 class BaseTTS(ABC):
     name: str = ""
-    available: bool = True
 
     @abstractmethod
-    def synthesize(self, text: str, out_path: str) -> tuple[int, float]:
+    def synthesize(self, text: str, out_path: str) -> Tuple[int, float]:
         """Synthesize text to a WAV at out_path. Returns (sample_rate, elapsed_seconds)."""
 
 
@@ -19,7 +21,7 @@ class Pyttsx3TTS(BaseTTS):
         import pyttsx3
         self._engine = pyttsx3.init()
 
-    def synthesize(self, text: str, out_path: str) -> tuple[int, float]:
+    def synthesize(self, text: str, out_path: str) -> Tuple[int, float]:
         t0 = time.perf_counter()
         self._engine.save_to_file(text, out_path)
         self._engine.runAndWait()
@@ -34,15 +36,13 @@ class KokoroTTS(BaseTTS):
     name = "kokoro"
 
     def __init__(self):
-        # kokoro 0.7.x API (compatible with Python 3.13)
         from kokoro import generate
         self._generate = generate
 
-    def synthesize(self, text: str, out_path: str) -> tuple[int, float]:
+    def synthesize(self, text: str, out_path: str) -> Tuple[int, float]:
         import soundfile as sf
 
         t0 = time.perf_counter()
-        # generate() returns (samples, sample_rate) in 0.7.x
         audio, sr = self._generate(text, voice="af", speed=1.0)
         elapsed = time.perf_counter() - t0
 
@@ -57,7 +57,7 @@ class CoquiXTTSTTS(BaseTTS):
         from TTS.api import TTS
         self._tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2")
 
-    def synthesize(self, text: str, out_path: str) -> tuple[int, float]:
+    def synthesize(self, text: str, out_path: str) -> Tuple[int, float]:
         t0 = time.perf_counter()
         self._tts.tts_to_file(
             text=text, file_path=out_path,
@@ -69,14 +69,14 @@ class CoquiXTTSTTS(BaseTTS):
         return sr, elapsed
 
 
-def _probe_engines() -> dict[str, type[BaseTTS]]:
+def _probe_engines() -> Dict[str, Type[BaseTTS]]:
     """Return only engines whose top-level import succeeds."""
-    candidates: list[tuple[str, type[BaseTTS], str]] = [
-        ("pyttsx3", Pyttsx3TTS,    "pyttsx3"),
-        ("kokoro",  KokoroTTS,     "kokoro"),
-        ("xtts",    CoquiXTTSTTS,  "TTS"),
+    candidates: List[Tuple[str, Type[BaseTTS], str]] = [
+        ("pyttsx3", Pyttsx3TTS,   "pyttsx3"),
+        ("kokoro",  KokoroTTS,    "kokoro"),
+        ("xtts",    CoquiXTTSTTS, "TTS"),
     ]
-    available = {}
+    available: Dict[str, Type[BaseTTS]] = {}
     for key, cls, pkg in candidates:
         try:
             __import__(pkg)
@@ -86,4 +86,4 @@ def _probe_engines() -> dict[str, type[BaseTTS]]:
     return available
 
 
-ENGINES: dict[str, type[BaseTTS]] = _probe_engines()
+ENGINES: Dict[str, Type[BaseTTS]] = _probe_engines()

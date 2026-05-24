@@ -1,7 +1,10 @@
 """Pipeline: run engines × sentences, aggregate per-engine summaries."""
+from __future__ import annotations
+
 import os
 import tempfile
 from dataclasses import dataclass, field
+from typing import Callable, List, Optional
 
 from .tts_engines import ENGINES, BaseTTS
 from .evaluators import get_wer_scorer, get_mos_scorer
@@ -32,15 +35,15 @@ class EngineSummary:
     avg_wer: float
     avg_mos: float
     avg_rtf: float
-    sentence_results: list[SentenceResult] = field(default_factory=list)
+    sentence_results: List[SentenceResult] = field(default_factory=list)
 
 
 def run_pipeline(
-    engine_names: list[str],
-    sentences: list[str] | None = None,
+    engine_names: List[str],
+    sentences: Optional[List[str]] = None,
     whisper_model: str = "base",
-    progress_cb=None,
-) -> dict[str, EngineSummary]:
+    progress_cb: Optional[Callable] = None,
+) -> dict:
     """Run every requested engine over every sentence.
 
     progress_cb(engine_name, sentence_idx, total) is called after each WAV is scored.
@@ -51,14 +54,14 @@ def run_pipeline(
     wer_scorer = get_wer_scorer(whisper_model)
     mos_scorer = get_mos_scorer()
 
-    results: dict[str, EngineSummary] = {}
+    results = {}
 
     for eng_name in engine_names:
         if eng_name not in ENGINES:
             raise ValueError(f"Unknown engine '{eng_name}'. Available: {list(ENGINES)}")
 
         engine: BaseTTS = ENGINES[eng_name]()
-        sent_results: list[SentenceResult] = []
+        sent_results: List[SentenceResult] = []
 
         for idx, sentence in enumerate(sentences):
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
