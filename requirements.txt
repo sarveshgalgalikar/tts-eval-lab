@@ -3,4 +3,3 @@ soundfile
 numpy
 pyttsx3>=2.90
 faster-whisper
-kokoro==0.7.16
