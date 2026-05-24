@@ -16,13 +16,19 @@ class WhisperWER:
 
 class UTMOSScorer:
     def __init__(self):
-        import torch
-        self._model = torch.hub.load(
-            "tarepan/SpeechMOS:v1.2.0", "utmos22_strong", trust_repo=True
-        )
-        self._model.eval()
+        try:
+            import torch
+            self._model = torch.hub.load(
+                "tarepan/SpeechMOS:v1.2.0", "utmos22_strong", trust_repo=True
+            )
+            self._model.eval()
+            self._available = True
+        except Exception:
+            self._available = False
 
     def score(self, wav_path: str) -> float:
+        if not self._available:
+            return -1.0  # sentinel: MOS unavailable
         import torch
         import soundfile as sf
 
