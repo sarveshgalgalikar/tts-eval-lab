@@ -8,6 +8,9 @@ venv/
 dist/
 build/
 
+# Generated diagram images (regenerate with: python3 docs/generate_diagrams.py)
+docs/images/*.png
+
 # Generated outputs
 *.wav
 results.json
